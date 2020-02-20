@@ -27,9 +27,16 @@ spec:
           - containerPort: 2020
         env:
         - name: FLUENT_ELASTICSEARCH_HOST
-          value: "elasticsearch-elasticsearch-svc"
+          value: "quickstart-es-http.default.svc.cluster.local"
         - name: FLUENT_ELASTICSEARCH_PORT
           value: "9200"
+        - name: FLUENT_ELASTICSEARCH_USERNAME
+          value: "elastic"
+        - name: FLUENT_ELASTICSEARCH_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: quickstart-es-elastic-user
+              key: elastic
         volumeMounts:
         - name: varlog
           mountPath: /var/log

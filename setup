@@ -1,0 +1,59 @@
+#!/bin/bash
+
+# install elastic CRDs
+kubectl apply -f https://download.elastic.co/downloads/eck/1.0.1/all-in-one.yaml
+
+# Deploy Cluster with a node with enough resources
+cat <<EOF | kubectl apply -f -
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: quickstart
+spec:
+  version: 7.6.0
+  nodeSets:
+  - name: default
+    count: 1
+    podTemplate:
+      spec:
+        containers:
+        - name: elasticsearch
+          env:
+          - name: ES_JAVA_OPTS
+            value: -Xms2g -Xmx2g
+          resources:
+            requests:
+              memory: 4Gi
+              cpu: 0.5
+            limits:
+              memory: 4Gi
+              cpu: 2
+    config:
+      node.master: true
+      node.data: true
+      node.ingest: true
+      node.store.allow_mmap: false
+EOF
+
+sleep 180
+PASSWORD=$(kubectl get secret quickstart-es-elastic-user -o=jsonpath='{.data.elastic}' | base64 --decode)
+echo "Elastic Password: $PASSWORD"
+
+# make elastic reachable in host browser
+kubectl port-forward service/quickstart-es-http 9200 &
+
+
+# and now, for something completely different
+kubectl create namespace logging
+kubectl create -f https://raw.githubusercontent.com/fluent/fluent-bit-kubernetes-logging/master/fluent-bit-service-account.yaml
+kubectl create -f https://raw.githubusercontent.com/fluent/fluent-bit-kubernetes-logging/master/fluent-bit-role.yaml
+kubectl create -f https://raw.githubusercontent.com/fluent/fluent-bit-kubernetes-logging/master/fluent-bit-role-binding.yaml
+
+kubectl create secret -n logging generic quickstart-es-elastic-user --from-literal=elastic=$PASSWORD
+
+kubectl apply -f fluent/configmap.yaml
+kubectl apply -f fluent/daemonset.yaml
+
+
+# now for the workload
+kubectl apply -f counter.yaml

@@ -21,7 +21,7 @@ data:
     @INCLUDE input-kubernetes.conf
     @INCLUDE filter-kubernetes.conf
     @INCLUDE filter-evoila.conf
-    @INCLUDE output-kafka.conf
+    @INCLUDE output-elasticsearch.conf
 
   input-kubernetes.conf: |
     [INPUT]
@@ -68,7 +68,7 @@ data:
         Match  *
         Add group helio
         Rename kubernetes_copy_labels_app app
-        Rename kubernetes_copy_labels_customer kubernetes.labels.userid
+        Rename kubernetes_copy_labels_customer userUid
         Rename kubernetes_copy_labels_job appGuid
         Rename kubernetes_copy_labels_tier groupGuid
     [FILTER]
@@ -79,6 +79,7 @@ data:
         Remove kubernetes_copy_label
         Remove kubernetes_copy_annotations
         Remove kubernetes_copy_docker_id
+        Remove kubernetes_copy_host
 
   output-elasticsearch.conf: |
     [OUTPUT]
@@ -86,6 +87,10 @@ data:
         Match           *
         Host            ${FLUENT_ELASTICSEARCH_HOST}
         Port            ${FLUENT_ELASTICSEARCH_PORT}
+        HTTP_User       ${FLUENT_ELASTICSEARCH_USERNAME}
+        HTTP_Passwd     ${FLUENT_ELASTICSEARCH_PASSWORD}
+        tls             On
+        tls.verify      Off
         Logstash_Format On
         Replace_Dots    On
         Retry_Limit     False
